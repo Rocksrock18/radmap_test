@@ -266,8 +266,8 @@ def update_covid_data():
 	# send data to snowflake
 	conn, cur = establish_connection()
 	initialize_schema(cur)
-	populate_table(conn, cur, covid_ohio_df, "OHIO_COVID_TABLE", "Date string, New_Cases integer")
-	populate_table(conn, cur, covid_usa_df, "USA_COVID_TABLE", "Date string, New_Cases integer")
+	populate_table(conn, cur, covid_ohio_df, "TEMP_OHIO_COVID_TABLE", "Date string, New_Cases integer")
+	populate_table(conn, cur, covid_usa_df, "TEMP_USA_COVID_TABLE", "Date string, New_Cases integer")
 	close_connection(conn, cur)
 
 update_covid_data()
