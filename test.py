@@ -6,8 +6,6 @@ import snowflake.connector as snow
 from snowflake.connector.pandas_tools import write_pandas
 
 from urllib.request import urlopen
-from shapely.geometry import Point
-import geopandas
 import math
 
 from selenium import webdriver
@@ -16,103 +14,6 @@ from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.support.ui import WebDriverWait as wait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
-
-
-def get_water_wells():
-	URL = 'https://apps.ohiodnr.gov/water/maptechs/wellogs/app/'
-
-	u = urlopen(URL)
-	try:
-		html = u.read().decode('utf-8')
-	finally:
-		u.close()
-
-	temp = dict()
-
-	num_wells = 0
-
-	# Get list county codes to use later
-	soup_counties = BeautifulSoup(html, "html.parser").find_all('option')
-
-	# create an Empty DataFrame object
-	df = pd.DataFrame(columns = ['WELL_NO', 'COUNTY', 'TOWNSHIP', 'STREET', 'CASING_DIAMETER', 'TOTAL_DEPTH', 'STATIC_WATER_LEVEL'])
-
-	# For each county number get the list of wells
-	for county_option in soup_counties:
-		county_no = county_option['value']
-
-		# Loop through each link to roads alphabetically (A-Z, then 1-9)
-		modes = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z','0','1','2','3','4','5','6','7','8','9']
-		for mode in modes:
-			# Open the page containing the list of roads
-			u = urlopen('https://apps.ohiodnr.gov/water/maptechs/wellogs/app/broad.asp?mode=1&broad=' + mode + '&ccode=' + county_no)
-			try:
-				html = u.read().decode('utf-8')
-			finally:
-				u.close()
-			roads = BeautifulSoup(html, "html.parser").find_all('ul')[0].find_all('a') # unordered list of all roads for this county
-
-			# For each road in this list of a tags, open the page with the list of wells on   
-			for road in roads: 
-				# Open the page containing the list of wells for this road
-				#print('https://apps.ohiodnr.gov/water/maptechs/wellogs/app/' + road['href'])
-				u = urlopen('https://apps.ohiodnr.gov/water/maptechs/wellogs/app/' + road['href'])
-				try:
-					html = u.read().decode('utf-8')
-				finally:
-					u.close()
-
-				# Find all links to well pages
-				wells = BeautifulSoup(html, "html.parser").find_all('ul')[0].find_all('a')
-				if len(wells)>0:
-					# For each well on the page, concat the pandas dataf frame with the amount of water
-					for well in wells:
-						#print(well['href'])
-						u = urlopen('https://apps.ohiodnr.gov' + well['href'])
-						try:
-							html = u.read().decode('utf-8')
-						finally:
-							u.close()
-
-						datasoup = BeautifulSoup(html, "html.parser")
-
-						#print(datasoup.text)
-						#input("Wait...")
-
-						# From this page, want well number, county, township, street, cubic feet of water
-						well_no = datasoup.find(id="WellLogNo").getText()
-						county = datasoup.find(id="County").getText()
-						township = datasoup.find(id="Township").getText()
-						street = datasoup.find(id="Address").getText()
-						casingdiameter = datasoup.find(id="CasingDiameter1").getText()
-						totaldepth = datasoup.find(id="TotalDepth").getText()
-						staticwaterlevel = datasoup.find(id="StaticWaterLevel").getText()
-						lat = datasoup.find(id="Latitude").getText()
-						lon = datasoup.find(id="Longitude").getText()
-						if len(lat) == 0 or len(casingdiameter) == 0 or len(totaldepth) == 0 or len(staticwaterlevel) == 0:
-							continue
-						tot_vol = f'{round(math.pi * ((float(casingdiameter[:casingdiameter.index(" ")])/24)**2 * (float(totaldepth[:totaldepth.index(" ")])-float(staticwaterlevel[:staticwaterlevel.index(" ")]))), 2)} cubic ft.'
-
-						# Append the new well data to df
-						#temp[well_no] = [county, township, street, casingdiameter, totaldepth, staticwaterlevel]
-						newwell = pd.DataFrame([[well_no,county,township,street,casingdiameter,totaldepth,staticwaterlevel, lat, lon, tot_vol]],columns=['WELL_NO', 'COUNTY', 'TOWNSHIP', 'STREET', 'CASING_DIAMETER', 'TOTAL_DEPTH', 'STATIC_WATER_LEVEL', 'LATITUDE', 'LONGITUDE', 'TOTAL_VOLUME'])
-						df = df.append(newwell)
-						num_wells += 1
-						print(num_wells)
-						if num_wells > 20:
-							df['GEOMETRY'] = df.apply(lambda x: Point((float(x.LONGITUDE), float(x.LATITUDE))), axis=1)
-							df = geopandas.GeoDataFrame(df, geometry='GEOMETRY')
-							df.to_file('MyGeometries.shp', driver='ESRI Shapefile')
-							df = df.drop('GEOMETRY', axis=1)
-							print(df)
-							input("wasss")
-							return df
-						#df2 = pd.DataFrame([[key] + value for key, value in temp.items()], columns=['Well_No', 'County', 'Township', 'Street', 'CasingDiameter', 'TotalDepth', 'StaticWaterLevel'])
-						#print(df)
-						#print(df2)
-						#input("check")
-	print("Done")
-
 
 def establish_connection():
     print("Establishing connection to Snowflake...")
