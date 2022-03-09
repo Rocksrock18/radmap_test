@@ -1,0 +1,7 @@
+bs4
+pandas
+json
+snowflake-connector-python
+selenium
+chromedriver-autoinstaller
+math
