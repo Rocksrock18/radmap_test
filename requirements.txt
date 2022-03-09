@@ -1,5 +1,7 @@
 bs4
 pandas
 snowflake-connector-python
+fastparquet
+pyarrow==6.0.1
 selenium
 chromedriver-autoinstaller
