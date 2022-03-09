@@ -5,7 +5,7 @@ import json
 import snowflake.connector as snow
 from snowflake.connector.pandas_tools import write_pandas
 
-from urllib.request import urlopen
+import time
 import math
 
 from selenium import webdriver
@@ -120,8 +120,8 @@ def init_chrome_driver(url):
 	options.add_argument('--disable-dev-sh-usage')
 	driver = webdriver.Chrome(chrome_options=options)
 	driver.maximize_window()
-	driver.implicitly_wait(20)
 	driver.get(url)
+	time.sleep(5)
 	return driver
 
 def click_dropdown_element(driver, xpath):
@@ -129,19 +129,18 @@ def click_dropdown_element(driver, xpath):
 	actions = ActionChains(driver)
 	actions.move_to_element(s).perform()
 	wait(driver, 5).until(EC.visibility_of_element_located((By.XPATH, xpath))).click()
-	driver.implicitly_wait(50)
 
 def get_covid_data(ohio_only=False):
 	print(f'Getting covid data for {"Ohio" if ohio_only else "USA"}...')
 	# open a simulated chrome page with the given url
 	driver = init_chrome_driver("https://covid.cdc.gov/covid-data-tracker/#trends_dailycases")
 
-	# click on the dropdown menu
-	driver.find_element_by_xpath("//div[@class='ui search selection dropdown']").click()
-
 	if(ohio_only):
+		# click on the dropdown menu
+		driver.find_element_by_xpath("//div[@class='ui search selection dropdown']").click()
 		# click on Ohio from the dropdown menu
 		click_dropdown_element(driver, "//div[@data-value='39']")
+		time.sleep(5)
 
 	# fetch and store daily covid cases
 	innerHTML = driver.execute_script("return document.body.innerHTML")
